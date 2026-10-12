@@ -2,7 +2,7 @@
 
 **Insurance for machines that pays out automatically when the machine goes silent. No claim form, no adjuster.**
 
-Live demo: https://claude.ai/artifact/L2evPvKfrrb3gt5bBR6zbk
+Live demo: pulse-cover-seven.vercel.app
 Track: peaq Machine Economy (side track for German builders)
 
 ## The problem
