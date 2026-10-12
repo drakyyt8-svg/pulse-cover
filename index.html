@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pulse Cover: insurance that pays when a machine goes silent</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef3f1;--panel:#fff;--ink:#14262b;--mute:#566a6e;--line:#d3dedb;--ok:#0f7b6c;--bad:#d03a26;--gold:#a87a08;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a1d;--panel:#16272b;--ink:#e6f0ee;--mute:#92a9ac;--line:#2a4046;--ok:#3ccfb5;--bad:#ff6b57;--gold:#e8bd4a}}
+:root[data-theme="dark"]{--bg:#0e1a1d;--panel:#16272b;--ink:#e6f0ee;--mute:#92a9ac;--line:#2a4046;--ok:#3ccfb5;--bad:#ff6b57;--gold:#e8bd4a}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 Figtree,system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:28px 18px 48px}
+h1{font:800 clamp(34px,6vw,56px)/1 "Bricolage Grotesque",system-ui,sans-serif;margin:0 0 10px;letter-spacing:-.02em}
+h2{font:600 18px/1.2 "Bricolage Grotesque",system-ui,sans-serif;margin:0 0 12px}
+.lead{max-width:60ch;color:var(--mute);margin:0 0 14px}
+.note{display:inline-block;border:1px solid var(--gold);color:var(--gold);border-radius:6px;padding:4px 10px;font-size:14px;margin-bottom:22px}
+.grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.row:last-of-type{border-bottom:0}
+.row b{font-weight:600}
+.mute{color:var(--mute);font-size:14px}
+.pill{border-radius:99px;padding:2px 12px;font-size:14px;font-weight:600;border:1px solid var(--line);color:var(--mute)}
+.pill.ok{color:var(--ok);border-color:var(--ok)}
+.pill.bad{color:var(--bad);border-color:var(--bad)}
+.pill.gold{color:var(--gold);border-color:var(--gold)}
+canvas{width:100%;height:120px;display:block;margin:8px 0 12px}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:35%;background:var(--ok);transition:width .6s,background .6s}
+.big{font:800 40px/1 "Bricolage Grotesque",system-ui,sans-serif}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+button{font:600 15px Figtree,system-ui,sans-serif;padding:11px 16px;border-radius:8px;border:1px solid var(--ink);background:var(--panel);color:var(--ink);cursor:pointer}
+button.main{background:var(--ink);color:var(--bg)}
+button.danger{border-color:var(--bad);color:var(--bad)}
+button:disabled{opacity:.35;cursor:not-allowed}
+button:focus-visible{outline:3px solid var(--ok);outline-offset:2px}
+#log{list-style:none;margin:0;padding:0;max-height:230px;overflow-y:auto}
+#log li{padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+#log li span{color:var(--mute);margin-right:8px}
+#log .ok{color:var(--ok)}#log .bad{color:var(--bad)}#log .gold{color:var(--gold);font-weight:600}
+.how{margin-top:16px;color:var(--mute);max-width:75ch}
+.how p{margin:0 0 8px}
+@media(prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pulse Cover</h1>
+  <p class="lead">Insurance for machines. The machine sends a signed heartbeat. If the heartbeats stop, the money is paid out automatically. No claim form, no adjuster.</p>
+  <span class="note">Simulated demo. The next step is swapping in a real peaq machine ID and real activity events.</span>
+
+  <div class="btns">
+    <button class="main" id="bDemo">Run full demo</button>
+    <button id="bStart">Start machine</button>
+    <button id="bCover" disabled>Buy cover</button>
+    <button id="bCut" class="danger" disabled>Cut the signal</button>
+    <button id="bReset">Reset</button>
+  </div>
+
+  <div class="grid">
+    <section class="card" aria-label="The machine">
+      <h2>Delivery robot, Berlin</h2>
+      <div class="row"><span class="mute">Machine ID (simulated)</span><b id="mid">not activated</b></div>
+      <div class="row"><span class="mute">Status</span><span class="pill" id="status">offline</span></div>
+      <canvas id="ecg" width="640" height="120" aria-label="Live heartbeat line"></canvas>
+      <div class="row"><span class="mute">Earned so far</span><b id="earned">0.00 USDT</b></div>
+      <div class="row"><span class="mute">Machine credit rating</span><b><span id="grade">B</span> <span class="mute" id="score">(35 / 100)</span></b></div>
+      <div class="bar"><i id="scorebar"></i></div>
+    </section>
+
+    <section class="card" aria-label="The policy">
+      <h2>Downtime policy</h2>
+      <div class="row"><span class="mute">Pays out if silent for</span><b>5 seconds (demo time)</b></div>
+      <div class="row"><span class="mute">Payout</span><b>500 USDT</b></div>
+      <div class="row"><span class="mute">Premium today</span><b id="rate">4.36%</b></div>
+      <p class="mute" style="margin:6px 0 2px">Better rating, cheaper cover</p>
+      <div class="big" id="prem">21.80 USDT</div>
+      <div class="row" style="margin-top:12px"><span class="mute">Held in escrow</span><b id="escrow">0.00 USDT</b></div>
+      <div class="row"><span class="mute">Policy</span><span class="pill" id="pol">no cover</span></div>
+      <div class="row"><span class="mute">Paid to owner</span><b id="paid">0.00 USDT</b></div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px" aria-label="Event log">
+    <h2>What just happened</h2>
+    <ul id="log" aria-live="polite"></ul>
+  </section>
+
+  <div class="how">
+    <p><b>How it works.</b> The machine earns money and reports each job with a signed message, which builds its credit rating. A good rating makes the premium cheaper. Once the machine is covered, the premium sits in escrow. If the signed heartbeats stop, the escrow pays the owner by itself.</p>
+    <p>Try it: press Run full demo and watch the heartbeat line, the rating, and the payout.</p>
+    <p><b>Where peaq fits.</b> The machine ID maps to a peaq machine ID. The heartbeat maps to peaq's signed presence heartbeat. The rating maps to the peaq Machine Credit Rating, and the earnings reports map to peaq revenue events. In this demo all four are simulated. The escrow becomes an onchain contract in the next step.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var COVER=500, s, timers=[], q=[], buf=[], i;
+  for(i=0;i<128;i++)buf.push(0);
+  var PAT=[0,.15,0,-.25,1,-.5,.1,.2,.1,0];
+
+  function fresh(){return{on:false,cut:false,cov:false,paid:false,score:35,earned:0,escrow:0,got:0,silent:0,t:0,id:""}}
+  s=fresh();
+
+  function rate(){return 6-s.score*0.047}
+  function grade(){var g=s.score;return g>=85?"AA":g>=70?"A":g>=55?"BBB":g>=40?"BB":g>=25?"B":"CCC"}
+  function fmt(n){return n.toFixed(2)+" USDT"}
+  function hex(n){var o="";while(n--)o+="0123456789abcdef"[Math.floor(Math.random()*16)];return o}
+  function stamp(){var m=Math.floor(s.t/60),x=s.t%60;return (m<10?"0":"")+m+":"+(x<10?"0":"")+x}
+
+  function log(msg,cls){
+    var li=document.createElement("li");
+    li.innerHTML='<span>'+stamp()+'</span><em class="'+(cls||"")+'" style="font-style:normal">'+msg+'</em>';
+    var ul=$("log");ul.insertBefore(li,ul.firstChild);
+    while(ul.children.length>40)ul.removeChild(ul.lastChild);
+  }
+
+  function ui(){
+    var st=$("status"),pol=$("pol");
+    $("mid").textContent=s.id||"not activated";
+    st.textContent=!s.on?"offline":s.cut?"silent":"alive";
+    st.className="pill "+(!s.on?"":s.cut?"bad":"ok");
+    $("earned").textContent=fmt(s.earned);
+    $("grade").textContent=grade();
+    $("score").textContent="("+Math.round(s.score)+" / 100)";
+    var b=$("scorebar");b.style.width=s.score+"%";b.style.background=s.score<40?"var(--bad)":"var(--ok)";
+    $("rate").textContent=rate().toFixed(2)+"%";
+    $("prem").textContent=fmt(COVER*rate()/100);
+    $("escrow").textContent=fmt(s.escrow);
+    $("paid").textContent=fmt(s.got);
+    pol.textContent=s.paid?"paid out":s.cov?"active":"no cover";
+    pol.className="pill "+(s.paid?"gold":s.cov?"ok":"");
+    $("bStart").disabled=s.on;
+    $("bCover").disabled=!(s.on&&!s.cut&&!s.cov);
+    $("bCut").disabled=!(s.on&&!s.cut);
+  }
+
+  function start(){
+    if(s.on)return;
+    s.on=true;s.id="0x"+hex(8)+"…"+hex(4);
+    log("Machine activated with ID "+s.id,"ok");ui();
+  }
+  function cover(){
+    if(!s.on||s.cut||s.cov)return;
+    var p=COVER*rate()/100;
+    s.cov=true;s.escrow=p;
+    log("Cover bought. Premium "+fmt(p)+" ("+rate().toFixed(2)+"%) locked in escrow","ok");ui();
+  }
+  function cut(){
+    if(!s.on||s.cut)return;
+    s.cut=true;s.silent=0;
+    log("Signal cut. No more heartbeats.","bad");ui();
+  }
+  function reset(){
+    timers.forEach(clearTimeout);timers=[];
+    s=fresh();$("log").innerHTML="";ui();
+  }
+
+  function tick(){
+    if(!s.on)return;
+    s.t++;
+    if(!s.cut){
+      q=q.concat(PAT);
+      if(s.t%3===0){
+        var a=1.2+Math.random()*2.3;
+        s.earned+=a;s.score=Math.min(98,s.score+1.6);
+        log("Delivery done, +"+a.toFixed(2)+" USDT. Signed 0x"+hex(8),"ok");
+      }
+    }else{
+      s.silent++;
+      s.score=Math.max(5,s.score-3);
+      if(s.silent===2)log("No heartbeat for 2 seconds","bad");
+      if(s.silent>=5&&!s.paid){
+        if(s.cov){
+          s.paid=true;s.escrow=0;s.got=COVER;
+          log("Heartbeats stopped. Escrow paid the owner "+fmt(COVER)+" automatically.","gold");
+        }else if(s.silent===5){
+          log("Machine is down and has no cover. The owner takes the loss.","bad");
+        }
+      }
+    }
+    ui();
+  }
+
+  function demo(){
+    reset();start();
+    timers.push(setTimeout(cover,7000));
+    timers.push(setTimeout(cut,14000));
+  }
+
+  function draw(){
+    buf.push(q.length?q.shift():0);buf.shift();
+    var c=$("ecg"),x=c.getContext("2d"),w=c.width,h=c.height;
+    var cs=getComputedStyle(document.documentElement);
+    x.clearRect(0,0,w,h);
+    x.lineWidth=2.5;x.lineJoin="round";
+    x.strokeStyle=cs.getPropertyValue(s.on&&s.cut?"--bad":"--ok").trim()||"#0f7b6c";
+    x.beginPath();
+    for(var k=0;k<buf.length;k++){
+      var px=k*(w/(buf.length-1)),py=h*0.62-buf[k]*h*0.5;
+      k?x.lineTo(px,py):x.moveTo(px,py);
+    }
+    x.stroke();
+  }
+
+  $("bStart").onclick=start;$("bCover").onclick=cover;$("bCut").onclick=cut;
+  $("bReset").onclick=reset;$("bDemo").onclick=demo;
+  setInterval(tick,1000);setInterval(draw,50);ui();
+})();
+</script>
+</body>
+</html>
